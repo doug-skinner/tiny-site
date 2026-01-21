@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.slate.min.css"
+    />
+    <link href="/styles/prism.css" rel="stylesheet" />
+    <title>Doug's Vercel AI SDK Usage Notes/Examples</title>
+  </head>
+  <body>
+    <main>
+      <h1>Doug's Vercel AI SDK Usage Notes/Examples</h1>
+      <h2>Code Execution</h2>
+      <details name="code-execution">
+        <summary>Basic Example</summary>
+        <pre><code class="language-typescript">import {
+  anthropic,
+  createAnthropic,
+} from "@ai-sdk/anthropic";
+
+const anthropicClient = createAnthropic();
+await generateText({
+    model: anthropicClient("claude-haiku-4-5"),
+    prompt:
+      "Calculate the mean and standard deviation of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].",
+    tools: {
+      code_execution: anthropic.tools.codeExecution_20250825(),
+    },
+});</code></pre>
+      </details>
+      <h2>Using Skills</h2>
+      <details name="using-skills">
+        <summary>Generating Word Docs</summary>
+        <p>
+          We need to use the Vercel AI SDK piece to send messages, but we have
+          to use the antrhopic foundry SDK to download the generated files using
+          the beta files API.
+        </p>
+        <pre><code class="language-typescript">import { writeFileSync } from "node:fs";
+import {
+  type AnthropicProviderOptions,
+  anthropic,
+  createAnthropic,
+} from "@ai-sdk/anthropic";
+import { AnthropicFoundry } from "@anthropic-ai/foundry-sdk";
+import { generateText } from "ai";
+
+const main = async () => {
+  const anthropicClient = new AnthropicFoundry();
+  const anthropic = createAnthropic();
+
+  const result = await generateText({
+    model: anthropic("claude-haiku-4-5"),
+    prompt:
+      "Write a haiku about the sea and include it in a word doc that also explains the history of haikus.",
+    tools: {
+      code_execution: anthropic.tools.codeExecution_20250825(),
+    },
+    maxRetries: 0,
+    // timeout: 10 * 60 * 1000, // 10 minutes
+    providerOptions: {
+      anthropic: {
+        container: {
+          skills: [
+            {
+              type: "anthropic",
+              skillId: "pdf",
+            },
+          ],
+        },
+      } satisfies AnthropicProviderOptions,
+    },
+  });
+
+  console.log("Result:", result.text);
+
+  const fileIds = [];
+  for (const toolResult of result.toolResults) {
+    if (
+      toolResult.type === "tool-result" &&
+      toolResult.toolName === "code_execution"
+    ) {
+      for (const content of toolResult.output.content) {
+        if (content.type === "bash_code_execution_output") {
+          fileIds.push(content.file_id);
+        }
+      }
+    }
+  }
+
+  /// Download the generated files
+  for (const fileId of fileIds) {
+    const fileMetadata = await anthropicClient.beta.files.retrieveMetadata(
+      fileId,
+      {
+        betas: ["files-api-2025-04-14"],
+      },
+    );
+    const fileContent = await anthropicClient.beta.files.download(fileId, {
+      betas: ["files-api-2025-04-14"],
+    });
+
+    // Step 4: Save to disk
+    writeFileSync(
+      fileMetadata.filename,
+      Buffer.from(await fileContent.arrayBuffer()),
+    );
+    console.log(`Downloaded: ${fileMetadata.filename}`);
+  }
+};
+</code></pre>
+      </details>
+      <h2>Connecting to Claude Connectors</h2>
+      <details name="data-connectors">
+        <summary>PubMed Data Connector</summary>
+        <pre><code class="language-typescript">const result = await generateText({
+    model: anthropicAiSdkClient("claude-haiku-4-5"),
+    prompt,
+    providerOptions: {
+      anthropic: {
+        mcpServers: [
+          {
+            type: "url",
+            name: "pubmedMcp",
+            url: "https://pubmed.mcp.claude.com/mcp",
+          },
+        ],
+      } satisfies AnthropicProviderOptions,
+    },
+  });</code></pre>
+      </details>
+      <details name="data-connectors">
+        <summary>Clinical Trials Data Connector</summary>
+        <pre><code class="language-typescript">const result = await generateText({
+    model: anthropicAiSdkClient("claude-haiku-4-5"),
+    prompt,
+    providerOptions: {
+      anthropic: {
+        mcpServers: [
+          {
+            type: "url",
+            name: "clinicalTrialsMcp",
+            url: "https://mcp.deepsense.ai/clinical_trials/mcp",
+          },
+        ],
+      } satisfies AnthropicProviderOptions,
+    },
+  });</code></pre>
+      </details>
+
+      <h2>Random Snippets/Info</h2>
+      <ul>
+        <li>
+          Claude, and most LLMs, love assuming that anything that happens after
+          their training cutoff date is not real or relevant. This means that
+          when using connectors that provide up-to-date information, it's often
+          useful to include the current date in the system prompt.
+        </li>
+      </ul>
+    </main>
+    <script src="/scripts/prism.js"></script>
+  </body>
+</html>
