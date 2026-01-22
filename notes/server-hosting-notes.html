@@ -113,6 +113,86 @@ sudo ufw status</code></pre>
       </p>
       <pre><code class="language-bash">rsync -avz --delete ./* tinysite:/var/www/dougs-site/</code></pre>
       <p>And this let's you go to the IP address and see the files!</p>
+
+      <h2>Automated Deployment with GitHub Actions</h2>
+      <p>
+        While manual deployment with rsync works fine, it's much more convenient
+        to have deployments happen automatically when code is pushed to the
+        repository. GitHub Actions can handle this automatically.
+      </p>
+      <p>
+        The workflow is configured in
+        <code class="language-bash">.github/workflows/deploy.yml</code> and
+        runs on every push to the master branch. Here's how it works:
+      </p>
+      <pre><code class="language-yaml">name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy with rsync
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'README.md' \
+            ./ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_PATH }}
+
+      - name: Cleanup
+        if: always()
+        run: rm -f ~/.ssh/deploy_key</code></pre>
+      <p>
+        The workflow uses GitHub Secrets to securely store sensitive information.
+        You need to configure these secrets in your repository settings under
+        Settings → Secrets and variables → Actions:
+      </p>
+      <ul>
+        <li>
+          <strong>SSH_PRIVATE_KEY</strong> - Your SSH private key for server
+          authentication. Generate a dedicated key pair with
+          <code class="language-bash">ssh-keygen -t ed25519 -C "github-actions-deploy"</code>,
+          add the public key to the server's
+          <code class="language-bash">~/.ssh/authorized_keys</code>, and paste
+          the entire private key (including BEGIN and END lines) into this secret.
+        </li>
+        <li>
+          <strong>SERVER_HOST</strong> - The server hostname or IP address
+          (e.g., <code class="language-bash">157.245.119.227</code>)
+        </li>
+        <li>
+          <strong>SERVER_USER</strong> - SSH username on the server (e.g.,
+          <code class="language-bash">root</code>)
+        </li>
+        <li>
+          <strong>SERVER_PATH</strong> - Destination path on the server:
+          <code class="language-bash">/var/www/dougs-site</code>
+        </li>
+      </ul>
+      <p>
+        The workflow uses the same rsync command as manual deployment but with
+        the <code class="language-bash">--delete</code> flag to remove files on
+        the server that don't exist in the repository. It excludes Git-related
+        files and the README to keep the deployment clean.
+      </p>
+
       <p>
         Now, we need to get our domain name set up. I have my domain hosted with
         Namecheap, so I will log into my Namecheap account and update the DNS
