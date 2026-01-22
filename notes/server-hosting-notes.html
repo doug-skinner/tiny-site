@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.slate.min.css"
+    />
+    <link href="/styles/prism.css" rel="stylesheet" />
+    <title>Server Hosting Notes</title>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <ul>
+          <li>
+            <strong><a href="/">Doug's Site</a></strong>
+          </li>
+        </ul>
+        <ul>
+          <li><a href="/notes">Notes</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+      <h1>Server Hosting Notes</h1>
+      <h2>Server Setup</h2>
+      <p>The server that hosts this website is at Digital Ocean.</p>
+      <p>
+        To setup access I am using ssh keys, which can be created with the
+        <code>ssh-keygen</code> command, and then copied to the server with
+        <code>ssh-copy-id</code>.
+      </p>
+    </main>
+    <script src="/scripts/prism.js"></script>
+  </body>
+</html>
