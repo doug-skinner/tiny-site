@@ -26,12 +26,113 @@
     </header>
     <main>
       <h1>Server Hosting Notes</h1>
-      <h2>Server Setup</h2>
+      <h2>Server OS Setup</h2>
       <p>The server that hosts this website is at Digital Ocean.</p>
       <p>
         To setup access I am using ssh keys, which can be created with the
-        <code>ssh-keygen</code> command, and then copied to the server with
-        <code>ssh-copy-id</code>.
+        <code class="language-bash">ssh-keygen</code> command, and then copied
+        to the server with <code class="language-bash">ssh-copy-id</code>.
+      </p>
+      <p>
+        You also want to make sure that the server has been updated recently,
+        which can be done with the
+        <code class="language-bash">apt update &amp;&amp; apt upgrade</code>
+        commands on Ubuntu.
+      </p>
+      <h2>Web Server Setup</h2>
+      <p>
+        Most of my career nowadays has been using AWS infrastructure with
+        services like Lambda and ECS/EKS. While this is great for scalability,
+        it is very overkill for a personal website. So for this site I am using
+        a standard web server to serve static files. This was also slightly
+        influenced by reading
+        <a href="http://www.aaronsw.com/weblog/000404">Aaron Swartz's blog</a>.
+      </p>
+      <p>
+        Before we set up the web server, we need to setup a firewall. Since
+        we're using Ubuntu, we can use UFW (Uncomplicated Firewall) for this
+        purpose. The following commands will allow SSH and HTTP/HTTPS traffic:
+      </p>
+      <pre><code class="language-bash">sudo apt install ufw
+sudo ufw allow 22/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw enable
+sudo ufw status</code></pre>
+      <p>
+        For the web server, I decided to use Nginx. Luckily, NGINX is super easy
+        to get installed and running. Just run
+        <code class="language-bash">sudo apt-get install nginx</code>. Once it's
+        installed, it automatically starts running. You can check its status
+        with <code class="language-bash">sudo systemctl status nginx</code>. You
+        should be able to visit your server's IP address in a web browser and
+        see the default NGINX welcome page.
+      </p>
+      <p>
+        So now we have a server. We need to get our website files onto it! The
+        first step is making the directory where the website files will live. By
+        default, NGINX serves files from
+        <code class="language-bash">/var/www/html</code>. Since you always want
+        to assume you're going to run multiple websites on a server, it's a good
+        idea to create a separate directory for each site. So let's create a
+        directory for this site:
+        <code class="language-bash">mkdir /var/www/dougs-site</code>.
+      </p>
+      <p>
+        And now we have to setup the NGINX configuration for this site. For this
+        site, here is the file:
+      </p>
+      <pre><code class="language-nginx">server {
+    listen 80;
+    root /var/www/dougs-site;
+
+    server_name dsknr.com www.dsknr.com 157.245.119.227;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}</code></pre>
+      <p>
+        First we need to put that file in the NGINX sites-available directory:
+        <code class="language-bash"
+          >sudo vi /etc/nginx/sites-available/dougs-site</code
+        >. Then we need to create a symbolic link to it in the sites-enabled
+        directory, which NGINX actually uses:
+        <code class="language-bash"
+          >sudo ln -s /etc/nginx/sites-available/dougs-site
+          /etc/nginx/sites-enabled/</code
+        >. Finally, we need to test the NGINX configuration for syntax errors
+        and reload NGINX to apply the changes:
+        <code class="language-bash"
+          >sudo nginx -t &amp;&amp; sudo systemctl reload nginx</code
+        >.
+      </p>
+      <p>
+        Now we need to get the actual files there! For now we're going to use
+        rsync:
+      </p>
+      <pre><code class="language-bash">rsync -avz --delete ./* tinysite:/var/www/dougs-site/</code></pre>
+      <p>And this let's you go to the IP address and see the files!</p>
+      <p>
+        Now, we need to get our domain name set up. I have my domain hosted with
+        Namecheap, so I will log into my Namecheap account and update the DNS
+        settings to point to my server's IP address.
+      </p>
+      <p>
+        Finally, in this day and age, every website should be behind HTTPS with
+        a valid SSL certificate. You can use Let's Encrypt to obtain a free SSL
+        certificate and configure NGINX to use it. To install Certbot run:
+      </p>
+      <pre><code class="language-bash">sudo snap install --classic certbot</code></pre>
+      <p>
+        And now we need to make the command executable:
+        <code class="language-bash"
+          >sudo ln -s /snap/bin/certbot /usr/local/bin/certbot</code
+        >
+      </p>
+      <p>
+        And then finally run certbot:
+        <code class="language-bash">sudo certbot --nginx</code>
       </p>
     </main>
     <script src="/scripts/prism.js"></script>
