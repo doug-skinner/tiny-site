@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.classless.slate.min.css"
+    />
+    <title>AI Assistant Development Notes</title>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <ul>
+          <li>
+            <strong><a href="/">Doug's Site</a></strong>
+          </li>
+        </ul>
+        <ul>
+          <li><a href="/notes">Notes</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+      <h1>AI Assistant Development Notes</h1>
+      <p>
+        At my dayjob, I'm responsible for the team that develops our in-house
+        LLM based AI assistant. Since the landscape is changing rapidly, I
+        wanted to have a space for me to jot down notes and ideas as I figure
+        out the best path forward.
+      </p>
+      <hr />
+      <h2>Seeing is believing, or checking it's work</h2>
+      <p>
+        At my company, I think one of the biggest hurdles for us is to get our
+        staff to fully embrace the idea of using AI in their daily work. While
+        many are excited about the possibilities, there is still a lot of
+        skepticism and fear around the technology. It's also important to note
+        that unlike what you read online, I am not seeing this divide between
+        fear and excitement along age lines. There are plenty of older staff who
+        are excited about AI, and plenty of younger staff who are skeptical.
+      </p>
+      <p>
+        I also have to keep in mind that I work in a highly regulated industry,
+        so there are additional hurdles to overcome in terms of compliance and
+        data security. To handle both the fear and the regulatory concerns, I
+        think one of the best approaches is to focus on transparency as the
+        system does its work. If the user can see how the AI is arriving at its
+        conclusions, they are more likely to trust it.
+      </p>
+      <p>
+        How do we do this? Well, currently while our AI assistant doesn't have
+        access to tools or skills, it does sometimes have access to data in the
+        form of things like pdf or word documents, plus information added to
+        it's system prompt in certain circumstances. Most of the use of our
+        assistant is through our "general chat" interface, where the user can
+        ask it questions in natural language, similar to ChatGPT. Therefore, we
+        have focused on explaining to our users that the AI is trained on data
+        up to a certain date, and can answer questions based on that data. We
+        have historically
+        <b>not</b> found a good way to show the user when the AI is using data
+        from documents it has access to.
+      </p>
+      <p>
+        As we explore making the system much more capable, and thus complicated,
+        it's important to figure out how we can show the user the steps that the
+        assistant took to reach its conclusion, and any data or tools it used
+        along the way.
+      </p>
+      <p>
+        We are currently using pieces of the Vercel AI SDK to build out our
+        interface, and we can take some inspiration from how they expose tool
+        calls in the response data. At the bare minimum, we should be showing
+        users when the AI uses a tool, what tool it used, and the input and
+        output of that tool. This will help build trust with the users, as they
+        can see exactly what the AI is doing. But we must also be careful not to
+        overwhelm the user with too much information. We need to find a balance
+        between transparency and usability.
+      </p>
+      <h2>Tools and Skills and Data, oh my</h2>
+      <p>In other words, naming is hard lol.</p>
+      <p>
+        I am very excited about the pace of development in the AI space right
+        now. I truly do think that if we can all agree on a mental model for how
+        things work, we can make amazing progress as an industry. However, the
+        current environment is a bit of a mess, with different companies using
+        different names for the same things, and sometimes the same names for
+        different things. And then you have to explain to non-technical users
+        what these things are, which adds another layer of complexity.
+      </p>
+      <p>
+        For the purposes of my notes, and what I will try to push my team to
+        adopt, here are the definitions I am going to use:
+      </p>
+      <dl>
+        <dt>Tools</dt>
+        <dd>
+          A discrete function or capability of the system, created by software
+          engineers. Examples can include things like sending emails, searching
+          the web, or running calculations/code. Tools are generally not
+          specific to any particular job function, and can be used by anyone
+          with access to the system. Since tools are discrete functions, they
+          generally have well-defined inputs and outputs, making them easy to
+          use and understand. They should also be easily testable and debuggable
+          by engineers.
+        </dd>
+        <dt>Agent Skills/Abilities</dt>
+        <dd>
+          A detailed set of information or instructions that help the AI perform
+          a specific part of someone's job. Skills are generally created by
+          subject matter experts (SMEs) who understand the nuances of a
+          particular job function. Examples can include things like customer
+          support, medical diagnosis, or legal research. Skills are generally
+          specific to a particular job function, and may require specialized
+          knowledge to create and maintain. Since skills are more complex than
+          tools, they may not have well-defined inputs and outputs, and may
+          require more interpretation by the AI. Skills should be regularly
+          reviewed and updated by SMEs to ensure they remain accurate and
+          relevant. Skills may also incorporate multiple tools or data
+          connectors to accomplish their goals.
+        </dd>
+        <dt>Data Connectors</dt>
+        <dd>
+          A way to connect to and retrieve data from a specific source system.
+          Data connectors are generally created by software engineers or data
+          engineers who understand the source system and how to access its data.
+          Examples can include things like connecting to a CRM system, document
+          repository, or database. Data connectors are generally specific to a
+          particular source system, and may require specialized knowledge to
+          create and maintain. Since data connectors are focused on data access,
+          they should have well-defined inputs and outputs, but may require some
+          interpretation by the AI. Data connectors are the means by which the
+          AI can access up-to-date information from various systems to inform
+          its responses. Unfortunately, data connectors are the most poorly
+          defined of these three terms in the industry right now, and the
+          implementation of specific data connectors can vary widely between
+          exposing tools, or clis that are called by a tool, or MCP servers that
+          can expose other tools to the AI. Therefore, it's important to clearly
+          document the functionality and purpose of each data connector to avoid
+          confusion.
+        </dd>
+      </dl>
+      <p>
+        I know that these definitions may not be perfect, and I promise that
+        others in the industry may use different definitions. But I think it's
+        important to have a common language within my team, so we can all be on
+        the same page. The biggest hurdle is going to be setting clear
+        boundaries between these definitions, because they are all fungible. For
+        example, if I want to information about who worked on a particular drug
+        trial, is that a tool call to a database, a skill that's all about drug
+        trial information, or a data connector that is particular to that source
+        system? Any of those could be correct, depending on your point of view,
+        which could make this a fool's errand. But I still have to try. Which
+        leads to this summary:
+      </p>
+      <p>
+        <b
+          >A tool is a function of the system, created engineers, like sending
+          emails. A skill/ability is created to help the AI perform a specific
+          part of someone's job, like describing how to respond to a customer
+          inquiry. A data connector is a way to get data from a specific source
+          system, like a CRM or document repository. All three can be toggled on
+          or off for/by a particular user based on their needs and permissions.
+        </b>
+      </p>
+    </main>
+  </body>
+</html>
